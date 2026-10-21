@@ -906,10 +906,11 @@ function renderInspectors() {
         new Date(directive.dueDate).getTime() < Date.now()
     ).length;
 
-    const awaitingAdminCount = inspectorDirectives.filter(
+    // أزرق للإدارة: المفتش رد على التوجيه ولم تطلع عليه الإدارة بعد
+    const newRepliesCount = inspectorDirectives.filter(
       directive =>
-        directive.acknowledgedAt &&
-        !directive.adminViewedAcknowledgmentAt
+        directive.completedAt &&
+        !directive.adminViewedCompletionAt
     ).length;
 
     if (pendingCount) {
@@ -928,16 +929,15 @@ function renderInspectors() {
       card.appendChild(warning);
     }
 
-    if (awaitingAdminCount) {
+    if (newRepliesCount) {
       const notification = el(
-        "span",
-        "●",
+        "p",
+        `● يوجد ${newRepliesCount} رد جديد على التوجيهات`,
         "directive-notification"
       );
 
       notification.style.color = "#2563eb";
-      notification.style.fontSize = "20px";
-      notification.title = "يوجد إقرار استلام جديد";
+      notification.style.fontWeight = "bold";
 
       card.appendChild(notification);
     }
@@ -1033,8 +1033,7 @@ function saveDirective(event) {
     completedAt: null,
     completedBy: "",
     reply: "",
-    deliveryMethod: "",
-    markerColor: ""
+    deliveryMethod: ""
   };
 
   directives.unshift(directive);
@@ -1137,19 +1136,6 @@ function showInspectorDirectives(name) {
         "تاريخ ووقت الاستلام",
         formatDateTime(directive.acknowledgedAt)
       );
-
-      if (!directive.adminViewedAcknowledgmentAt) {
-        const notice = el(
-          "p",
-          "● إقرار استلام جديد",
-          "directive-admin-notice"
-        );
-
-        notice.style.color = "#2563eb";
-        notice.style.fontWeight = "bold";
-
-        card.appendChild(notice);
-      }
     }
 
     if (directive.completedAt) {
@@ -1168,47 +1154,20 @@ function showInspectorDirectives(name) {
         "طريقة تسليم الرد",
         directive.deliveryMethod || "—"
       );
-    }
 
-    const colorRow = el("div", "", "actions");
+      if (!directive.adminViewedCompletionAt) {
+        const notice = el(
+          "p",
+          "● رد جديد من المفتش",
+          "directive-admin-notice"
+        );
 
-    colorRow.appendChild(
-      el("span", "لون العلامة: ")
-    );
+        notice.style.color = "#2563eb";
+        notice.style.fontWeight = "bold";
 
-    [
-      ["أحمر", "#dc2626"],
-      ["أزرق", "#2563eb"],
-      ["أخضر", "#16a34a"],
-      ["أصفر", "#eab308"],
-      ["بدون", ""]
-    ].forEach(([label, color]) => {
-      const colorButton = button(label, () => {
-        directive.markerColor = color;
-
-        if (saveDirectives()) {
-          showInspectorDirectives(name);
-          renderInspectors();
-        }
-      });
-
-      if (color) {
-        colorButton.style.borderColor = color;
-        colorButton.style.color = color;
+        card.style.borderInlineStart = "5px solid #2563eb";
+        card.appendChild(notice);
       }
-
-      colorRow.appendChild(colorButton);
-    });
-
-    card.appendChild(colorRow);
-
-    if (directive.markerColor) {
-      const marker = el("span", "●");
-
-      marker.style.color = directive.markerColor;
-      marker.style.fontSize = "24px";
-
-      card.appendChild(marker);
     }
 
     dialog.appendChild(card);
@@ -2602,7 +2561,6 @@ tr {
 <div class="report-header">
   <img
     class="report-logo"
-    src="logo.PNG"
     alt="شعار حكومة الشارقة وبلدية مدينة الذيد"
   >
 </div>
@@ -2730,36 +2688,33 @@ tr {
 
   const logo = doc.querySelector(".report-logo");
 
-  logo.src = new URL(
-    "logo.PNG",
-    document.baseURI
-  ).href;
-
   const openPrint = () => {
     popup.focus();
     popup.print();
   };
 
-  if (logo.complete) {
-    setTimeout(openPrint, 350);
-  } else {
-    logo.addEventListener(
-      "load",
-      openPrint,
-      { once: true }
-    );
+  logo.addEventListener(
+    "load",
+    () => setTimeout(openPrint, 300),
+    { once: true }
+  );
 
-    logo.addEventListener(
-      "error",
-      () => {
-        alert(
-          "تعذر تحميل شعار التقرير. تأكدي من اسم report-logo.png"
-        );
-        openPrint();
-      },
-      { once: true }
-    );
-  }
+  logo.addEventListener(
+    "error",
+    () => {
+      alert(
+        "تعذر تحميل شعار التقرير. تأكدي من رفع ملف logo.png"
+      );
+      openPrint();
+    },
+    { once: true }
+  );
+
+  // اسم الملف حساس لحالة الأحرف على GitHub Pages
+  logo.src = new URL(
+    "logo.png",
+    document.baseURI
+  ).href;
 }
 
 /* ================= التذكيرات الأسبوعية ================= */
@@ -4262,20 +4217,20 @@ function renderInspectorDirectives() {
   items.forEach(item => {
     const card = makeCard("توجيه إداري");
 
-    const notification = el(
-      "span",
-      "●",
-      "directive-notification"
-    );
+    // أحمر للمفتش: توجيه لم يرد عليه بعد
+    if (!item.completedAt) {
+      const notification = el(
+        "p",
+        "● توجيه بانتظار ردك",
+        "directive-notification"
+      );
 
-    notification.style.color =
-      item.inspectorNotificationColor === "none"
-        ? "transparent"
-        : item.inspectorNotificationColor || "red";
+      notification.style.color = "#dc2626";
+      notification.style.fontWeight = "bold";
 
-    notification.style.fontSize = "22px";
-
-    card.prepend(notification);
+      card.style.borderInlineStart = "5px solid #dc2626";
+      card.appendChild(notification);
+    }
 
     detail(card, "التوجيه", item.text);
 
@@ -4383,11 +4338,6 @@ function acknowledgeDirective(id) {
 
   item.acknowledgedAt = new Date().toISOString();
 
-  item.inspectorNotificationColor = "none";
-  item.adminNotificationColor = "blue";
-
-  item.adminViewedAcknowledgmentAt = null;
-
   if (!saveDirectives()) return;
 
   renderInspectorDirectives();
@@ -4444,8 +4394,6 @@ function completeDirective(id) {
   item.status = "completed";
   item.completedBy = getCurrentInspectorName();
   item.completedAt = new Date().toISOString();
-
-  item.adminNotificationColor = "blue";
   item.adminViewedCompletionAt = null;
 
   if (!saveDirectives()) return;
@@ -4540,84 +4488,38 @@ function renderAdminDirectives() {
       card.appendChild(warning);
     }
 
-    const hasNewAcknowledgment =
-      item.acknowledgedAt &&
-      !item.adminViewedAcknowledgmentAt;
-
-    const hasNewCompletion =
-      item.completedAt &&
-      !item.adminViewedCompletionAt;
-
-    if (
-      (hasNewAcknowledgment || hasNewCompletion) &&
-      item.adminNotificationColor !== "none"
-    ) {
+    // أزرق للإدارة: رد جديد من المفتش حتى تضغط الإدارة "تم الاطلاع"
+    if (item.completedAt && !item.adminViewedCompletionAt) {
       const notice = el(
         "p",
-        "● إشعار جديد من المفتش"
+        "● رد جديد من المفتش"
       );
 
-      notice.style.color =
-        item.adminNotificationColor || "blue";
+      notice.style.color = "#2563eb";
+      notice.style.fontWeight = "bold";
 
+      card.style.borderInlineStart = "5px solid #2563eb";
       card.appendChild(notice);
+
+      const actions = el("div", "", "actions");
+
+      actions.appendChild(
+        button(
+          "تم الاطلاع على الرد",
+          () => {
+            item.adminViewedCompletionAt =
+              new Date().toISOString();
+
+            if (saveDirectives()) {
+              renderAll();
+            }
+          },
+          "secondary"
+        )
+      );
+
+      card.appendChild(actions);
     }
-
-    const actions = el("div", "", "actions");
-
-    actions.appendChild(
-      button(
-        "تم الاطلاع من الإدارة",
-        () => {
-          item.adminViewedAcknowledgmentAt =
-            item.acknowledgedAt
-              ? new Date().toISOString()
-              : null;
-
-          item.adminViewedCompletionAt =
-            item.completedAt
-              ? new Date().toISOString()
-              : null;
-
-          item.adminNotificationColor = "none";
-
-          if (saveDirectives()) {
-            renderAdminDirectives();
-          }
-        },
-        "secondary"
-      )
-    );
-
-    actions.appendChild(
-      button(
-        "تغيير لون الإشعار",
-        () => {
-          const color = prompt(
-            "اكتبي لون الإشعار: blue أو red أو none",
-            item.adminNotificationColor || "blue"
-          );
-
-          if (color === null) return;
-
-          const selected = color.trim().toLowerCase();
-
-          if (!["blue", "red", "none"].includes(selected)) {
-            alert("اختاري blue أو red أو none.");
-            return;
-          }
-
-          item.adminNotificationColor = selected;
-
-          if (saveDirectives()) {
-            renderAdminDirectives();
-          }
-        },
-        "secondary"
-      )
-    );
-
-    card.appendChild(actions);
 
     container.appendChild(card);
   });
