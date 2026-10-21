@@ -3757,9 +3757,20 @@ function editUser(id) {
       user.name || user.fullName || "";
   }
 
-  if ($("userRole")) {
-    $("userRole").value =
-      user.role || "";
+  const roleSelect = $("userRole");
+
+  if (roleSelect) {
+    // احتياط في حال كانت صفحة HTML قديمة بدون خيار المسؤول الرئيسي
+    if (
+      user.role &&
+      ![...roleSelect.options].some(option => option.value === user.role)
+    ) {
+      const option = el("option", roleLabel(user.role));
+      option.value = user.role;
+      roleSelect.prepend(option);
+    }
+
+    roleSelect.value = user.role || "";
   }
 
   if ($("userPassword")) {
