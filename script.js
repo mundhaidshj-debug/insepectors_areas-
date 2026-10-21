@@ -906,12 +906,12 @@ function renderInspectors() {
         new Date(directive.dueDate).getTime() < Date.now()
     ).length;
 
-    // أزرق للإدارة: المفتش رد على التوجيه ولم تطلع عليه الإدارة بعد
-    const newRepliesCount = inspectorDirectives.filter(
-      directive =>
-        directive.completedAt &&
-        !directive.adminViewedCompletionAt
+    const signalCount = color => inspectorDirectives.filter(
+      directive => directiveAdminSignal(directive)?.color === color
     ).length;
+
+    const acknowledgedCount = signalCount("#ea580c");
+    const newRepliesCount = signalCount("#2563eb");
 
     if (pendingCount) {
       detail(card, "التوجيهات غير المنجزة", pendingCount);
@@ -929,18 +929,19 @@ function renderInspectors() {
       card.appendChild(warning);
     }
 
-    if (newRepliesCount) {
-      const notification = el(
-        "p",
-        `● يوجد ${newRepliesCount} رد جديد على التوجيهات`,
-        "directive-notification"
-      );
+    [
+      [acknowledgedCount, "#ea580c", `● ${acknowledgedCount} توجيه أقر المفتش باستلامه`],
+      [newRepliesCount, "#2563eb", `● يوجد ${newRepliesCount} رد جديد على التوجيهات`]
+    ].forEach(([count, color, text]) => {
+      if (!count) return;
 
-      notification.style.color = "#2563eb";
+      const notification = el("p", text, "directive-notification");
+
+      notification.style.color = color;
       notification.style.fontWeight = "bold";
 
       card.appendChild(notification);
-    }
+    });
 
     actions.append(
       button(
@@ -1076,6 +1077,39 @@ function getInspectorDirectives(name) {
   );
 }
 
+/* ================= ألوان متابعة التوجيهات للإدارة ================= */
+
+// برتقالي: أقر المفتش بالاستلام ولم يرد بعد
+// أزرق: رد جديد من المفتش لم تطلع عليه الإدارة
+function directiveAdminSignal(directive) {
+  if (directive.completedAt) {
+    return directive.adminViewedCompletionAt
+      ? null
+      : { color: "#2563eb", text: "● رد جديد من المفتش" };
+  }
+
+  if (directive.acknowledgedAt) {
+    return { color: "#ea580c", text: "● أقر المفتش بالاستلام" };
+  }
+
+  return null;
+}
+
+function applyDirectiveSignal(card, directive) {
+  const signal = directiveAdminSignal(directive);
+  if (!signal) return null;
+
+  const notice = el("p", signal.text, "directive-admin-notice");
+
+  notice.style.color = signal.color;
+  notice.style.fontWeight = "bold";
+
+  card.style.borderInlineStart = `5px solid ${signal.color}`;
+  card.appendChild(notice);
+
+  return signal;
+}
+
 /* ================= عرض توجيهات مفتش للإدارة ================= */
 
 function showInspectorDirectives(name) {
@@ -1099,6 +1133,9 @@ function showInspectorDirectives(name) {
   }
 
   dialog.replaceChildren();
+
+  // لإعادة رسم النافذة تلقائياً عند وصول تحديث من المفتش
+  dialog.dataset.inspector = name;
 
   dialog.appendChild(
     el("h2", `سجل التوجيهات - ${name}`)
@@ -1154,21 +1191,9 @@ function showInspectorDirectives(name) {
         "طريقة تسليم الرد",
         directive.deliveryMethod || "—"
       );
-
-      if (!directive.adminViewedCompletionAt) {
-        const notice = el(
-          "p",
-          "● رد جديد من المفتش",
-          "directive-admin-notice"
-        );
-
-        notice.style.color = "#2563eb";
-        notice.style.fontWeight = "bold";
-
-        card.style.borderInlineStart = "5px solid #2563eb";
-        card.appendChild(notice);
-      }
     }
+
+    applyDirectiveSignal(card, directive);
 
     dialog.appendChild(card);
   });
@@ -4488,19 +4513,10 @@ function renderAdminDirectives() {
       card.appendChild(warning);
     }
 
-    // أزرق للإدارة: رد جديد من المفتش حتى تضغط الإدارة "تم الاطلاع"
+    applyDirectiveSignal(card, item);
+
+    // الأزرق يبقى حتى تضغط الإدارة "تم الاطلاع على الرد"
     if (item.completedAt && !item.adminViewedCompletionAt) {
-      const notice = el(
-        "p",
-        "● رد جديد من المفتش"
-      );
-
-      notice.style.color = "#2563eb";
-      notice.style.fontWeight = "bold";
-
-      card.style.borderInlineStart = "5px solid #2563eb";
-      card.appendChild(notice);
-
       const actions = el("div", "", "actions");
 
       actions.appendChild(
@@ -4569,6 +4585,12 @@ function renderAll(fromRemote = false) {
 
     if (isSuperAdmin()) {
       renderUsers();
+    }
+
+    const directivesDialog = $("inspectorDirectivesDialog");
+
+    if (directivesDialog?.open) {
+      showInspectorDirectives(directivesDialog.dataset.inspector);
     }
   }
 
