@@ -840,32 +840,47 @@ function renameInspector(oldName) {
 function deleteInspector(name) {
   if (!requireAdmin()) return;
 
-  if (
-    db.zones.some(zone =>
-      sameName(zoneInspector(zone), name)
-    )
-  ) {
-    alert("لا يمكن حذف المفتش قبل تغيير نطاقه الأساسي.");
+  const ownZones = db.zones.filter(zone =>
+    sameName(zoneInspector(zone), name)
+  );
+
+  if (ownZones.length) {
+    alert(
+      `لا يمكن حذف المفتش لأنه المفتش الأساسي في: ${
+        ownZones.map(zone => zone.name).join("، ")
+      }.\nغيّري المفتش الأساسي لهذه النطاقات من صفحة النطاقات أولاً.`
+    );
+    return;
+  }
+
+  // حساب الدخول يحذف مع المفتش في نفس الخطوة
+  const accounts = users.filter(user =>
+    user.role === "inspector" &&
+    sameName(user.name || user.fullName, name)
+  );
+
+  if (accounts.length && !isSuperAdmin()) {
+    alert("لهذا المفتش حساب دخول، وحذفه يحتاج إلى المسؤول الرئيسي.");
     return;
   }
 
   if (
-    users.some(user =>
-      user.role === "inspector" &&
-      sameName(user.name || user.fullName, name)
+    !confirm(
+      `هل تريدين حذف المفتش ${name}؟` +
+      (accounts.length ? "\nسيتم حذف حساب الدخول الخاص به أيضاً." : "")
     )
   ) {
-    alert("احذفي حساب المفتش أولاً من إدارة المستخدمين.");
-    return;
-  }
-
-  if (!confirm(`هل تريدين حذف المفتش ${name}؟`)) {
     return;
   }
 
   db.inspectors = db.inspectors.filter(item =>
     !sameName(inspectorNameOf(item), name)
   );
+
+  if (accounts.length) {
+    users = users.filter(user => !accounts.includes(user));
+    saveUsers();
+  }
 
   save();
   logChange("", "حذف مفتش", name);
