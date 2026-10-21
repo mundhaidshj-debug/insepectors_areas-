@@ -1102,6 +1102,8 @@ function applyDirectiveSignal(card, directive) {
   const notice = el("p", signal.text, "directive-admin-notice");
 
   notice.style.color = signal.color;
+  notice.style.borderColor = signal.color;
+  notice.style.background = signal.color + "14";
   notice.style.fontWeight = "bold";
 
   card.style.borderInlineStart = `5px solid ${signal.color}`;
