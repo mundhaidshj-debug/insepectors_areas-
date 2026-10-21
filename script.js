@@ -3525,6 +3525,11 @@ function saveUser(event) {
     return;
   }
 
+  if (password && password.length < 8) {
+    alert("كلمة المرور يجب ألا تقل عن 8 أحرف.");
+    return;
+  }
+
   if (editId) {
     const user = findUser(editId);
 
@@ -3557,13 +3562,6 @@ function saveUser(event) {
     user.role = role;
 
     if (password) {
-      if (password.length < 8) {
-        alert(
-          "كلمة المرور يجب ألا تقل عن 8 أحرف."
-        );
-        return;
-      }
-
       user.password = password;
     }
 
@@ -3730,6 +3728,12 @@ function saveUser(event) {
 
   resetUserForm();
   renderAll();
+
+  // تحديث الاسم في أعلى الصفحة عند تعديل الحساب الحالي
+  if (currentUser && String(currentUser.id) === String(editId)) {
+    $("currentUserName").textContent = name;
+    $("currentUserRole").textContent = roleLabel(role);
+  }
 
   alert(
     editId
