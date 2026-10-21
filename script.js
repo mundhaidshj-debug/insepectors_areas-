@@ -1212,6 +1212,18 @@ function showInspectorDirectives(name) {
 
     applyDirectiveSignal(card, directive);
 
+    const actions = el("div", "", "actions");
+
+    actions.appendChild(
+      button(
+        "حذف التوجيه",
+        () => deleteDirective(directive.id),
+        "danger"
+      )
+    );
+
+    card.appendChild(actions);
+
     dialog.appendChild(card);
   });
 
@@ -4547,10 +4559,10 @@ function renderAdminDirectives() {
 
     applyDirectiveSignal(card, item);
 
+    const actions = el("div", "", "actions");
+
     // الأزرق يبقى حتى تضغط الإدارة "تم الاطلاع على الرد"
     if (item.completedAt && !item.adminViewedCompletionAt) {
-      const actions = el("div", "", "actions");
-
       actions.appendChild(
         button(
           "تم الاطلاع على الرد",
@@ -4565,12 +4577,47 @@ function renderAdminDirectives() {
           "secondary"
         )
       );
-
-      card.appendChild(actions);
     }
+
+    actions.appendChild(
+      button(
+        "حذف",
+        () => deleteDirective(item.id),
+        "danger"
+      )
+    );
+
+    card.appendChild(actions);
 
     container.appendChild(card);
   });
+}
+
+/* ================= حذف التوجيه ================= */
+
+function deleteDirective(id) {
+  if (!requireAdmin()) return;
+
+  const item = directives.find(directive =>
+    String(directive.id) === String(id)
+  );
+
+  if (!item) return;
+
+  if (
+    !confirm(
+      `هل تريدين حذف التوجيه "${item.text}" الخاص بالمفتش ${item.inspector}؟`
+    )
+  ) {
+    return;
+  }
+
+  directives = directives.filter(directive => directive !== item);
+
+  if (!saveDirectives()) return;
+
+  logChange("", "حذف توجيه", `${item.inspector}: ${item.text}`);
+  renderAll();
 }
 
 /* ================= ربط نموذج التوجيهات ================= */
