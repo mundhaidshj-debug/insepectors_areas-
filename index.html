@@ -9,7 +9,7 @@
   <title>نظام إدارة نطاقات المفتشين</title>
 
   <!-- رقم الإصدار يجبر المتصفح على تحميل النسخة الجديدة بعد كل تحديث -->
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 
   <!-- قاعدة البيانات المشتركة (Firebase) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
@@ -17,7 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
   <script src="firebase-config.js?v=3" defer></script>
 
-  <script src="script.js?v=7" defer></script>
+  <script src="script.js?v=8" defer></script>
 </head>
 
 <body>
@@ -636,6 +636,33 @@
                 rows="5"
                 placeholder="اكتب الأعمال المنجز يوم الخميس..."
               ></textarea>
+            </div>
+
+            <!-- ================= المعاملات المنجزة ================= -->
+
+            <div class="field">
+              <h3>المعاملات المنجزة</h3>
+
+              <div class="table-scroll">
+                <table class="transactions-table">
+                  <thead>
+                    <tr>
+                      <th>م</th>
+                      <th>المعاملة</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionsBody"></tbody>
+                </table>
+              </div>
+
+              <button
+                type="button"
+                class="secondary add-transaction"
+                onclick="addTransactionRow()"
+              >
+                + إضافة معاملة
+              </button>
             </div>
 
             <!-- ================= إحصائيات التفتيش ================= -->

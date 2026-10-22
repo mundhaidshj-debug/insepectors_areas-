@@ -728,6 +728,52 @@ main {
     margin-top: 18px;
 }
 
+/* ================= المعاملات المنجزة ================= */
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.transactions-table th,
+.transactions-table td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: right;
+    vertical-align: top;
+}
+
+.transactions-table th {
+    background: var(--primary-light);
+}
+
+.transactions-table th:first-child,
+.transactions-table td:first-child {
+    width: 45px;
+    text-align: center;
+}
+
+.transactions-table td:last-child {
+    width: 80px;
+}
+
+.transactions-table textarea {
+    width: 100%;
+    min-height: 60px;
+    resize: vertical;
+}
+
+.transactions-list {
+    margin: 6px 0 12px;
+    padding-inline-start: 22px;
+    white-space: pre-wrap;
+}
+
 /* ================= التوجيهات ================= */
 
 .directive-notification {

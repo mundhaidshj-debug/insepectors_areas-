@@ -1926,6 +1926,76 @@ function getCurrentDraftKey() {
   );
 }
 
+/* جدول المعاملات المنجزة */
+
+function renumberTransactionRows() {
+  $("transactionsBody")
+    ?.querySelectorAll("tr")
+    .forEach((row, index) => {
+      row.firstElementChild.textContent = index + 1;
+    });
+}
+
+function makeTransactionRow(value = "") {
+  const row = el("tr");
+  const numberCell = el("td");
+  const inputCell = el("td");
+  const actionCell = el("td");
+
+  // خانة نص يلصق فيها المفتش المعاملة كما هي
+  const input = el("textarea", "", "transaction-input");
+  input.rows = 2;
+  input.value = value;
+  input.placeholder = "الصقي المعاملة هنا";
+  input.addEventListener("input", scheduleWeeklyDraftSave);
+
+  inputCell.appendChild(input);
+
+  actionCell.appendChild(
+    button("حذف", () => {
+      row.remove();
+
+      if (!$("transactionsBody").children.length) {
+        $("transactionsBody").appendChild(makeTransactionRow());
+      }
+
+      renumberTransactionRows();
+      scheduleWeeklyDraftSave();
+    }, "danger")
+  );
+
+  row.append(numberCell, inputCell, actionCell);
+  return row;
+}
+
+function renderTransactionRows(list = []) {
+  const body = clear("transactionsBody");
+  if (!body) return;
+
+  (list.length ? list : [""]).forEach(value => {
+    body.appendChild(makeTransactionRow(value));
+  });
+
+  renumberTransactionRows();
+}
+
+function addTransactionRow() {
+  const body = $("transactionsBody");
+  if (!body) return;
+
+  const row = makeTransactionRow();
+  body.appendChild(row);
+
+  renumberTransactionRows();
+  row.querySelector("input").focus();
+}
+
+function getReportTransactions(report) {
+  return Array.isArray(report?.transactions)
+    ? report.transactions
+    : [];
+}
+
 /* قراءة بيانات التقرير الأسبوعي */
 
 function getWeeklyReportValues() {
@@ -1952,7 +2022,13 @@ function getWeeklyReportValues() {
     mondayReports: getNumber("mondayReports"),
     tuesdayReports: getNumber("tuesdayReports"),
     wednesdayReports: getNumber("wednesdayReports"),
-    thursdayReports: getNumber("thursdayReports")
+    thursdayReports: getNumber("thursdayReports"),
+
+    transactions: [
+      ...document.querySelectorAll("#transactionsBody .transaction-input")
+    ]
+      .map(input => input.value.trim())
+      .filter(Boolean)
   };
 
   values.totalViolations =
@@ -2011,6 +2087,8 @@ function setWeeklyReportValues(values = {}) {
       $(id).value = values[id] ?? 0;
     }
   });
+
+  renderTransactionRows(getReportTransactions(values));
 }
 
 /* إظهار حالة المسودة للمفتش */
@@ -2246,7 +2324,11 @@ function submitWeeklyReport(event) {
   const week = currentWeekKey();
   const values = getWeeklyReportValues();
 
-  if (!Object.values(values).some(Boolean)) {
+  const hasContent = Object.values(values).some(value =>
+    Array.isArray(value) ? value.length : Boolean(value)
+  );
+
+  if (!hasContent) {
     alert("يرجى إدخال الأعمال المنجزة.");
     return;
   }
@@ -2374,6 +2456,24 @@ function createWeeklyReportCard(report) {
     "الخميس",
     report.thursday || report.reportThursday || "—"
   );
+
+  const transactions = getReportTransactions(report);
+
+  if (transactions.length) {
+    card.appendChild(
+      el("strong", `المعاملات المنجزة (${transactions.length}):`)
+    );
+
+    const list = el("ol", "", "transactions-list");
+
+    transactions.forEach(text => {
+      list.appendChild(el("li", text));
+    });
+
+    card.appendChild(list);
+  } else {
+    detail(card, "المعاملات المنجزة", "—");
+  }
 
   const actions = el("div", "", "actions");
 
@@ -2589,6 +2689,21 @@ td:first-child {
   width: 26%;
 }
 
+.section-title {
+  font-size: 16px;
+  margin: 24px 0 10px;
+}
+
+.transactions th:first-child,
+.transactions td:first-child {
+  width: 10%;
+  text-align: center;
+}
+
+#reportStatistics {
+  margin-top: 24px;
+}
+
 tr {
   break-inside: avoid;
 }
@@ -2632,6 +2747,19 @@ tr {
   </thead>
   <tbody id="reportRows"></tbody>
 </table>
+
+<h2 class="section-title">المعاملات المنجزة</h2>
+
+<table class="transactions">
+  <thead>
+    <tr>
+      <th>م</th>
+      <th>المعاملة</th>
+    </tr>
+  </thead>
+  <tbody id="transactionRows"></tbody>
+</table>
+
 <div class="meta" id="reportStatistics">
   <h3>ملخص المخالفات الأسبوعية</h3>
   <p id="totalViolationsPrint"></p>
@@ -2712,6 +2840,22 @@ tr {
     tr.append(dayCell, workCell);
     tbody.appendChild(tr);
   });
+
+  const transactionRows = doc.getElementById("transactionRows");
+  const transactions = getReportTransactions(report);
+
+  (transactions.length ? transactions : ["لا توجد معاملات مدخلة"])
+    .forEach((text, index) => {
+      const tr = doc.createElement("tr");
+      const numberCell = doc.createElement("td");
+      const textCell = doc.createElement("td");
+
+      numberCell.textContent = transactions.length ? index + 1 : "—";
+      textCell.textContent = text;
+
+      tr.append(numberCell, textCell);
+      transactionRows.appendChild(tr);
+    });
 
   // حساب إجمالي المخالفات ومحاضر ضبط المخالفات
 
@@ -4928,5 +5072,6 @@ Object.assign(window, {
   sendWeeklyReminder,
   downloadBackup,
   importBackupFile,
-  clearHistory
+  clearHistory,
+  addTransactionRow
 });
