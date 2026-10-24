@@ -763,6 +763,12 @@ main {
     color: #fff;
 }
 
+.add-field-supervisor {
+    min-height: 120px;
+    border: 2px dashed var(--border);
+    font-size: 16px;
+}
+
 .zone-highlight {
     border: 2px solid #d4a017 !important;
     box-shadow: 0 0 0 4px rgba(212, 160, 23, 0.25), var(--shadow-hover);

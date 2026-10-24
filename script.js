@@ -1731,22 +1731,63 @@ const FIELD_SUPERVISOR_TITLES = [
 
 let activeFieldSupervisorId = null;
 
+// المسؤولان الافتراضيان يضافان مرة واحدة فقط، ويمكن حذفهما بعد ذلك
 function ensureFieldSupervisors() {
-  if (!Array.isArray(db.fieldSupervisors)) db.fieldSupervisors = [];
+  if (Array.isArray(db.fieldSupervisors)) return;
 
-  FIELD_SUPERVISOR_TITLES.forEach((title, index) => {
-    const id = "fs" + (index + 1);
+  db.fieldSupervisors = FIELD_SUPERVISOR_TITLES.map((title, index) => ({
+    id: "fs" + (index + 1),
+    title,
+    person: "",
+    zoneIds: [],
+    temp: null
+  }));
+}
 
-    if (!db.fieldSupervisors.some(item => item.id === id)) {
-      db.fieldSupervisors.push({
-        id,
-        title,
-        person: "",
-        zoneIds: [],
-        temp: null
-      });
-    }
-  });
+function addFieldSupervisor() {
+  if (!requireAdmin()) return;
+
+  let number = db.fieldSupervisors.length + 1;
+
+  while (
+    db.fieldSupervisors.some(item =>
+      item.title === "مسؤول نطاق ميداني " + number
+    )
+  ) {
+    number++;
+  }
+
+  const supervisor = {
+    id: uid(),
+    title: "مسؤول نطاق ميداني " + number,
+    person: "",
+    zoneIds: [],
+    temp: null
+  };
+
+  db.fieldSupervisors.push(supervisor);
+  save();
+  logChange("", "إضافة " + supervisor.title);
+
+  renderAll();
+  openFieldSupervisor(supervisor.id);
+}
+
+function deleteFieldSupervisor(id) {
+  if (!requireAdmin()) return;
+
+  const supervisor = findFieldSupervisor(id);
+  if (!supervisor) return;
+
+  if (!confirm(`هل تريدين حذف ${supervisor.title}؟`)) return;
+
+  db.fieldSupervisors = db.fieldSupervisors.filter(item => item !== supervisor);
+
+  if (activeFieldSupervisorId === id) activeFieldSupervisorId = null;
+
+  save();
+  logChange("", "حذف " + supervisor.title, supervisor.person);
+  renderAll();
 }
 
 function findFieldSupervisor(id) {
@@ -1812,16 +1853,32 @@ function renderFieldSupervisors() {
     const zoneCount = supervisor.zoneIds.filter(findZone).length;
     detail(card, "عدد النطاقات", zoneCount);
 
-    card.appendChild(
+    const actions = el("div", "", "actions");
+
+    actions.append(
       button(
         "تعديل المسؤول والنطاقات",
         () => openFieldSupervisor(supervisor.id),
         "secondary"
+      ),
+      button(
+        "حذف",
+        () => deleteFieldSupervisor(supervisor.id),
+        "danger"
       )
     );
 
+    card.appendChild(actions);
     container.appendChild(card);
   });
+
+  const addButton = button(
+    "+ إضافة مسؤول ميداني",
+    addFieldSupervisor,
+    "secondary add-field-supervisor"
+  );
+
+  container.appendChild(addButton);
 }
 
 function openFieldSupervisor(id) {
@@ -1832,6 +1889,7 @@ function openFieldSupervisor(id) {
 
   $("fieldSupervisorId").value = id;
   $("fieldSupervisorTitle").textContent = supervisor.title;
+  $("fieldSupervisorName").value = supervisor.title;
   $("fieldSupervisorPerson").value = supervisor.person || "";
 
   const datalist = clear("peopleNames");
@@ -1901,8 +1959,16 @@ function saveFieldSupervisor(event) {
     return;
   }
 
+  const title = normalizeName($("fieldSupervisorName").value);
+
+  if (!title) {
+    alert("يرجى إدخال اسم الزر.");
+    return;
+  }
+
   const oldPerson = supervisor.person;
 
+  supervisor.title = title;
   supervisor.person = person;
   supervisor.zoneIds = [
     ...document.querySelectorAll("#fieldSupervisorZones input:checked")
