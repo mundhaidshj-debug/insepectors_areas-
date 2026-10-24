@@ -173,6 +173,8 @@ function loadState() {
     if (!Array.isArray(db[key])) db[key] = [];
   });
 
+  ensureFieldSupervisors();
+
   users = readData(USERS_KEY, []);
   directives = readData(DIRECTIVES_KEY, []);
 
@@ -1670,8 +1672,23 @@ function renderZones() {
     return;
   }
 
+  // تظليل نطاقات مسؤول النطاق الميداني المختار
+  const supervisor = activeFieldSupervisorId
+    ? findFieldSupervisor(activeFieldSupervisorId)
+    : null;
+
   filtered.forEach(zone => {
-    container.appendChild(createZoneCard(zone));
+    const card = createZoneCard(zone);
+
+    if (supervisor) {
+      card.classList.add(
+        supervisor.zoneIds.includes(zoneId(zone))
+          ? "zone-highlight"
+          : "zone-dimmed"
+      );
+    }
+
+    container.appendChild(card);
   });
 }
 
@@ -1703,6 +1720,210 @@ function renderAlerts() {
       );
     }
   });
+}
+
+/* ================= مسؤولو النطاقات الميدانية ================= */
+
+const FIELD_SUPERVISOR_TITLES = [
+  "مسؤول نطاق ميداني 1",
+  "مسؤول نطاق ميداني 2"
+];
+
+let activeFieldSupervisorId = null;
+
+function ensureFieldSupervisors() {
+  if (!Array.isArray(db.fieldSupervisors)) db.fieldSupervisors = [];
+
+  FIELD_SUPERVISOR_TITLES.forEach((title, index) => {
+    const id = "fs" + (index + 1);
+
+    if (!db.fieldSupervisors.some(item => item.id === id)) {
+      db.fieldSupervisors.push({
+        id,
+        title,
+        person: "",
+        zoneIds: [],
+        temp: null
+      });
+    }
+  });
+}
+
+function findFieldSupervisor(id) {
+  return db.fieldSupervisors.find(item => item.id === id);
+}
+
+// التكليف المؤقت فعال فقط خلال فترته
+function activeFieldSupervisorTemp(supervisor) {
+  const temp = supervisor.temp;
+  const today = dateISO();
+
+  return temp?.person &&
+    (!temp.start || temp.start <= today) &&
+    (!temp.end || temp.end >= today)
+    ? temp
+    : null;
+}
+
+function toggleFieldSupervisor(id) {
+  activeFieldSupervisorId =
+    activeFieldSupervisorId === id ? null : id;
+
+  renderFieldSupervisors();
+  renderZones();
+}
+
+function renderFieldSupervisors() {
+  const container = clear("fieldSupervisors");
+  if (!container) return;
+
+  // قد تفتقد البيانات المستعادة من نسخة احتياطية قديمة هذا القسم
+  ensureFieldSupervisors();
+
+  db.fieldSupervisors.forEach(supervisor => {
+    const card = el("div", "", "field-supervisor-card");
+
+    const toggle = button(
+      supervisor.title,
+      () => toggleFieldSupervisor(supervisor.id),
+      "field-supervisor-toggle"
+    );
+
+    if (activeFieldSupervisorId === supervisor.id) {
+      card.classList.add("active");
+    }
+
+    card.appendChild(toggle);
+
+    const temp = activeFieldSupervisorTemp(supervisor);
+
+    if (temp) {
+      detail(card, "المكلف حالياً", temp.person);
+      detail(
+        card,
+        "فترة التكليف",
+        `${formatDate(temp.start)} - ${formatDate(temp.end)}`
+      );
+      detail(card, "المسؤول الأساسي", supervisor.person || "—");
+    } else {
+      detail(card, "المسؤول", supervisor.person || "لم يحدد بعد");
+    }
+
+    const zoneCount = supervisor.zoneIds.filter(findZone).length;
+    detail(card, "عدد النطاقات", zoneCount);
+
+    card.appendChild(
+      button(
+        "تعديل المسؤول والنطاقات",
+        () => openFieldSupervisor(supervisor.id),
+        "secondary"
+      )
+    );
+
+    container.appendChild(card);
+  });
+}
+
+function openFieldSupervisor(id) {
+  if (!requireAdmin()) return;
+
+  const supervisor = findFieldSupervisor(id);
+  if (!supervisor) return;
+
+  $("fieldSupervisorId").value = id;
+  $("fieldSupervisorTitle").textContent = supervisor.title;
+  $("fieldSupervisorPerson").value = supervisor.person || "";
+
+  const datalist = clear("peopleNames");
+
+  [
+    ...getInspectorNames(),
+    ...users.map(user => user.name || user.fullName || "")
+  ]
+    .filter((name, index, array) =>
+      name && array.findIndex(n => sameName(n, name)) === index
+    )
+    .forEach(name => {
+      const option = el("option");
+      option.value = name;
+      datalist.appendChild(option);
+    });
+
+  const zonesBox = clear("fieldSupervisorZones");
+
+  if (!db.zones.length) {
+    zonesBox.appendChild(el("p", "لا توجد نطاقات مسجلة بعد."));
+  }
+
+  db.zones.forEach(zone => {
+    const label = el("label", "", "zone-checkbox");
+    const checkbox = el("input");
+
+    checkbox.type = "checkbox";
+    checkbox.value = zoneId(zone);
+    checkbox.checked = supervisor.zoneIds.includes(zoneId(zone));
+
+    const other = db.fieldSupervisors.find(item =>
+      item.id !== id && item.zoneIds.includes(zoneId(zone))
+    );
+
+    label.append(
+      checkbox,
+      document.createTextNode(
+        " " + zone.name + (other ? ` (تابع أيضاً لـ ${other.title})` : "")
+      )
+    );
+
+    zonesBox.appendChild(label);
+  });
+
+  $("fieldSupervisorTempPerson").value = supervisor.temp?.person || "";
+  $("fieldSupervisorTempStart").value = supervisor.temp?.start || "";
+  $("fieldSupervisorTempEnd").value = supervisor.temp?.end || "";
+
+  $("fieldSupervisorDialog").showModal();
+}
+
+function saveFieldSupervisor(event) {
+  event.preventDefault();
+  if (!requireAdmin()) return;
+
+  const supervisor = findFieldSupervisor($("fieldSupervisorId").value);
+  if (!supervisor) return;
+
+  const person = normalizeName($("fieldSupervisorPerson").value);
+  const tempPerson = normalizeName($("fieldSupervisorTempPerson").value);
+  const start = $("fieldSupervisorTempStart").value;
+  const end = $("fieldSupervisorTempEnd").value;
+
+  if (tempPerson && (!start || !end || end < start)) {
+    alert("يرجى إدخال فترة تكليف صحيحة للشخص المكلف.");
+    return;
+  }
+
+  const oldPerson = supervisor.person;
+
+  supervisor.person = person;
+  supervisor.zoneIds = [
+    ...document.querySelectorAll("#fieldSupervisorZones input:checked")
+  ].map(input => input.value);
+  supervisor.temp = tempPerson
+    ? { person: tempPerson, start, end }
+    : null;
+
+  save();
+
+  logChange(
+    "",
+    "تعديل " + supervisor.title,
+    [
+      !sameName(oldPerson, person) && `المسؤول: ${person || "—"}`,
+      tempPerson && `تكليف ${tempPerson} من ${formatDate(start)} إلى ${formatDate(end)}`
+    ].filter(Boolean).join(" | ")
+  );
+
+  $("fieldSupervisorDialog").close();
+  renderAll();
 }
 
 /* ================= إدارة التكليفات ================= */
@@ -4796,6 +5017,7 @@ function renderAll(fromRemote = false) {
   if (!currentUser) return;
 
   if (isAdmin()) {
+    renderFieldSupervisors();
     renderZones();
     renderAlerts();
     renderInspectors();
@@ -4851,6 +5073,7 @@ function initializeSystem() {
   bindForm("weeklyReportForm", submitWeeklyReport);
   bindForm("inspectorRequestForm", submitReplacementRequest);
   bindForm("userForm", saveUser);
+  bindForm("fieldSupervisorForm", saveFieldSupervisor);
 
   const reportFields = [
     "reportMonday",

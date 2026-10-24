@@ -9,7 +9,7 @@
   <title>نظام إدارة نطاقات المفتشين</title>
 
   <!-- رقم الإصدار يجبر المتصفح على تحميل النسخة الجديدة بعد كل تحديث -->
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 
   <!-- قاعدة البيانات المشتركة (Firebase) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
@@ -17,7 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
   <script src="firebase-config.js?v=3" defer></script>
 
-  <script src="script.js?v=8" defer></script>
+  <script src="script.js?v=9" defer></script>
 </head>
 
 <body>
@@ -191,6 +191,14 @@
             <button type="button" onclick="openZone()">
               + إضافة نطاق
             </button>
+          </div>
+
+          <!-- ================= مسؤولو النطاقات الميدانية ================= -->
+
+          <div class="field-supervisors">
+            <h3>مسؤولو النطاقات الميدانية</h3>
+            <p>اضغطي على المسؤول لإظهار النطاقات التابعة له.</p>
+            <div id="fieldSupervisors" class="field-supervisors-grid"></div>
           </div>
         </div>
 
@@ -788,6 +796,74 @@
           type="button"
           class="secondary"
           onclick="document.getElementById('zoneDialog').close()"
+        >
+          إلغاء
+        </button>
+      </div>
+
+    </form>
+  </dialog>
+
+  <!-- ================= نافذة مسؤول النطاق الميداني ================= -->
+
+  <dialog id="fieldSupervisorDialog">
+
+    <h2 id="fieldSupervisorTitle">مسؤول النطاق الميداني</h2>
+
+    <form id="fieldSupervisorForm">
+
+      <input type="hidden" id="fieldSupervisorId">
+
+      <datalist id="peopleNames"></datalist>
+
+      <div class="field">
+        <label for="fieldSupervisorPerson">المسؤول الأساسي</label>
+        <input
+          id="fieldSupervisorPerson"
+          list="peopleNames"
+          placeholder="اختاري أو اكتبي الاسم"
+        >
+      </div>
+
+      <div class="field">
+        <label>النطاقات التابعة له</label>
+        <div id="fieldSupervisorZones" class="zone-checkboxes"></div>
+      </div>
+
+      <h3>تكليف مؤقت (اختياري)</h3>
+      <p>
+        خلال فترة التكليف يظهر الشخص المكلف بدل المسؤول الأساسي،
+        وبعد انتهاء الفترة يرجع المسؤول الأساسي تلقائياً.
+      </p>
+
+      <div class="field">
+        <label for="fieldSupervisorTempPerson">الشخص المكلف</label>
+        <input
+          id="fieldSupervisorTempPerson"
+          list="peopleNames"
+          placeholder="اتركيه فارغاً إذا لا يوجد تكليف"
+        >
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="fieldSupervisorTempStart">من تاريخ</label>
+          <input id="fieldSupervisorTempStart" type="date">
+        </div>
+
+        <div class="field">
+          <label for="fieldSupervisorTempEnd">إلى تاريخ</label>
+          <input id="fieldSupervisorTempEnd" type="date">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit">حفظ</button>
+
+        <button
+          type="button"
+          class="secondary"
+          onclick="document.getElementById('fieldSupervisorDialog').close()"
         >
           إلغاء
         </button>

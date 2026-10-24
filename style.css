@@ -728,6 +728,72 @@ main {
     margin-top: 18px;
 }
 
+/* ================= مسؤولو النطاقات الميدانية ================= */
+
+.field-supervisors {
+    margin-top: 18px;
+}
+
+.field-supervisors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.field-supervisor-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    background: var(--surface);
+}
+
+.field-supervisor-card.active {
+    border-color: #d4a017;
+    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.25);
+}
+
+.field-supervisor-toggle {
+    width: 100%;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.field-supervisor-card.active .field-supervisor-toggle {
+    background: #d4a017;
+    color: #fff;
+}
+
+.zone-highlight {
+    border: 2px solid #d4a017 !important;
+    box-shadow: 0 0 0 4px rgba(212, 160, 23, 0.25), var(--shadow-hover);
+    background: #fffbea;
+}
+
+.zone-dimmed {
+    opacity: 0.4;
+}
+
+.zone-checkboxes {
+    display: grid;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.zone-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+}
+
+#fieldSupervisorDialog {
+    width: min(94vw, 600px);
+}
+
 /* ================= المعاملات المنجزة ================= */
 
 .table-scroll {
