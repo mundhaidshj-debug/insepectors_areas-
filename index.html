@@ -9,7 +9,7 @@
   <title>نظام إدارة نطاقات المفتشين</title>
 
   <!-- رقم الإصدار يجبر المتصفح على تحميل النسخة الجديدة بعد كل تحديث -->
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 
   <!-- قاعدة البيانات المشتركة (Firebase) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
@@ -17,7 +17,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
   <script src="firebase-config.js?v=3" defer></script>
 
-  <script src="script.js?v=10" defer></script>
+  <script src="script.js?v=11" defer></script>
 </head>
 
 <body>
@@ -467,6 +467,12 @@
         <div
           id="inspectorWelcome"
           class="inspector-welcome"
+        ></div>
+
+        <div
+          id="inspectorFieldSupervisor"
+          class="inspector-field-supervisor"
+          hidden
         ></div>
 
         <div class="panel inspector-zones-panel">

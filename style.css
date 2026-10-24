@@ -775,6 +775,27 @@ main {
     background: #fffbea;
 }
 
+.field-supervisor-tag {
+    color: #9a7410;
+    font-weight: 700;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.inspector-field-supervisor {
+    border: 2px solid #d4a017;
+    background: #fffbea;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 0 0 4px rgba(212, 160, 23, 0.2);
+}
+
+.inspector-field-supervisor h3 {
+    color: #9a7410;
+    margin-top: 0;
+}
+
 .zone-dimmed {
     opacity: 0.4;
 }

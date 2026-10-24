@@ -1677,6 +1677,9 @@ function renderZones() {
     ? findFieldSupervisor(activeFieldSupervisorId)
     : null;
 
+  // بدون اختيار: تظليل النطاقات التي يشرف عليها المستخدم الحالي
+  const mine = mySupervisedZoneIds();
+
   filtered.forEach(zone => {
     const card = createZoneCard(zone);
 
@@ -1686,8 +1689,11 @@ function renderZones() {
           ? "zone-highlight"
           : "zone-dimmed"
       );
+    } else if (mine.has(zoneId(zone))) {
+      card.classList.add("zone-highlight");
     }
 
+    addFieldSupervisorTag(card, zone);
     container.appendChild(card);
   });
 }
@@ -1804,6 +1810,87 @@ function activeFieldSupervisorTemp(supervisor) {
     (!temp.end || temp.end >= today)
     ? temp
     : null;
+}
+
+// الشخص المسؤول فعلياً الآن: المكلف خلال فترة التكليف، وإلا الأساسي
+function fieldSupervisorPerson(supervisor) {
+  return activeFieldSupervisorTemp(supervisor)?.person ||
+    supervisor.person ||
+    "";
+}
+
+// النطاقات التي يشرف عليها المستخدم الحالي ميدانياً
+function mySupervisedZoneIds() {
+  const name = getCurrentInspectorName();
+  const ids = new Set();
+
+  if (!name) return ids;
+
+  db.fieldSupervisors.forEach(supervisor => {
+    if (sameName(fieldSupervisorPerson(supervisor), name)) {
+      supervisor.zoneIds.forEach(id => ids.add(id));
+    }
+  });
+
+  return ids;
+}
+
+function zoneFieldSupervisors(zone) {
+  return db.fieldSupervisors.filter(supervisor =>
+    supervisor.zoneIds.includes(zoneId(zone)) &&
+    fieldSupervisorPerson(supervisor)
+  );
+}
+
+function addFieldSupervisorTag(card, zone) {
+  const names = zoneFieldSupervisors(zone)
+    .map(fieldSupervisorPerson)
+    .filter((name, index, array) =>
+      array.findIndex(n => sameName(n, name)) === index
+    );
+
+  if (!names.length) return;
+
+  card.appendChild(
+    el("p", "المسؤول الميداني: " + names.join("، "), "field-supervisor-tag")
+  );
+}
+
+// المسؤولون الميدانيون المباشرون للمفتش بحسب النطاقات المكلف بها حالياً
+function renderInspectorFieldSupervisor() {
+  const box = clear("inspectorFieldSupervisor");
+  if (!box) return;
+
+  const name = getCurrentInspectorName();
+
+  const myZones = db.zones.filter(zone =>
+    sameName(getActiveZoneInspector(zone), name) ||
+    sameName(zoneInspector(zone), name)
+  );
+
+  const supervisors = [];
+
+  myZones.forEach(zone => {
+    zoneFieldSupervisors(zone).forEach(supervisor => {
+      const person = fieldSupervisorPerson(supervisor);
+
+      if (
+        !sameName(person, name) &&
+        !supervisors.some(item => sameName(item.person, person))
+      ) {
+        supervisors.push({ person, title: supervisor.title });
+      }
+    });
+  });
+
+  box.hidden = !supervisors.length;
+  if (!supervisors.length) return;
+
+  box.appendChild(el("h3", "مسؤولك الميداني المباشر"));
+
+  supervisors.forEach(item => {
+    detail(box, item.title, item.person);
+  });
 }
 
 function toggleFieldSupervisor(id) {
@@ -2149,6 +2236,9 @@ function renderInspectorDashboard() {
       `مرحباً ${name}`;
   }
 
+  ensureFieldSupervisors();
+  renderInspectorFieldSupervisor();
+
   const container = clear("inspectorZones");
   if (!container) return;
 
@@ -2162,10 +2252,18 @@ function renderInspectorDashboard() {
     return;
   }
 
+  // إذا كان المفتش مسؤولاً ميدانياً تظلل نطاقاته بنفس لون الإدارة
+  const mine = mySupervisedZoneIds();
+
   visibleZones.forEach(zone => {
-    container.appendChild(
-      createZoneCard(zone, true)
-    );
+    const card = createZoneCard(zone, true);
+
+    if (mine.has(zoneId(zone))) {
+      card.classList.add("zone-highlight");
+    }
+
+    addFieldSupervisorTag(card, zone);
+    container.appendChild(card);
   });
 }
 
